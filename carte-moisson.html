@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Carte de la Moisson — INP-HB Centre</title>
+<style>
+  :root{
+    --green:#16a34a; --green-bg:#dcfce7;
+    --amber:#d97706; --amber-bg:#fef3c7;
+    --red:#dc2626; --red-bg:#fee2e2;
+    --ink:#1c1917; --sub:#6b6058;
+    --paper:#faf7f2; --card:#ffffff;
+    --line:#e7e0d6; --accent:#7c3f2b; --accent2:#b5651d;
+    --radius:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  body{padding-bottom:78px;}
+  h1,h2,h3{margin:0 0 4px 0; font-weight:700;}
+  button{font-family:inherit;}
+  a{color:inherit;}
+  ::-webkit-scrollbar{display:none;}
+
+  /* ---------- header ---------- */
+  header.top{position:sticky; top:0; z-index:20; background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff; padding:14px 16px 12px; box-shadow:0 2px 10px rgba(0,0,0,.12);}
+  header.top .row{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  header.top .title{font-size:17px; font-weight:800; letter-spacing:.2px;}
+  header.top .sub{font-size:11.5px; opacity:.85; margin-top:2px;}
+  .sync-pill{display:flex; align-items:center; gap:6px; background:rgba(255,255,255,.16);
+    padding:6px 10px; border-radius:999px; font-size:11.5px; white-space:nowrap;}
+  .dot{width:8px; height:8px; border-radius:50%; flex:none;}
+  .dot.green{background:#4ade80;} .dot.amber{background:#fbbf24; animation:pulse 1s infinite;}
+  .dot.red{background:#f87171;} .dot.err{background:#fca5a5;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* ---------- layout ---------- */
+  main{padding:14px 14px 8px; max-width:640px; margin:0 auto;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px; margin-bottom:12px;}
+  .muted{color:var(--sub); font-size:12.5px;}
+
+  /* ---------- dashboard ---------- */
+  .big-progress{display:flex; align-items:center; gap:14px;}
+  .ring{width:76px;height:76px;border-radius:50%;flex:none;
+    background:conic-gradient(var(--green) calc(var(--pct)*1%), var(--line) 0);
+    display:flex; align-items:center; justify-content:center;}
+  .ring inner{}
+  .ring span{background:var(--card); width:58px; height:58px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;}
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;}
+  .stat-box{background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:10px 12px;}
+  .stat-box .n{font-size:19px; font-weight:800;}
+  .stat-box .l{font-size:11.5px; color:var(--sub);}
+  .bar-wrap{background:var(--line); border-radius:8px; height:10px; overflow:hidden; margin:6px 0 2px;}
+  .bar-fill{height:100%; background:var(--green); border-radius:8px;}
+
+  /* ---------- buttons / nav ---------- */
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    background:var(--accent); color:#fff; border:none; border-radius:12px; padding:12px 16px;
+    font-size:14.5px; font-weight:700; cursor:pointer;}
+  .btn.secondary{background:var(--card); color:var(--accent); border:1.5px solid var(--accent);}
+  .btn.block{width:100%;}
+  .btn.sm{padding:8px 12px; font-size:13px; border-radius:10px;}
+  .btn:disabled{opacity:.5;}
+
+  nav.bottom{position:fixed; bottom:0; left:0; right:0; z-index:20; background:#fff;
+    border-top:1px solid var(--line); display:flex; padding:6px 4px calc(6px + env(safe-area-inset-bottom));}
+  nav.bottom .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:6px 2px; border:none; background:none; color:var(--sub); font-size:10.5px; font-weight:600;}
+  nav.bottom .tab.active{color:var(--accent);}
+  nav.bottom .tab .ic{font-size:19px; line-height:1;}
+
+  /* ---------- buildings grid ---------- */
+  .bld-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+  .bld-cell{aspect-ratio:1; border-radius:14px; border:1px solid var(--line); background:var(--card);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer;
+    font-weight:800; font-size:18px; position:relative;}
+  .bld-cell small{font-weight:600; font-size:9.5px; color:var(--sub); margin-top:2px;}
+  .bld-cell .ring-mini{position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%;}
+
+  /* ---------- room list ---------- */
+  .room-row{display:flex; align-items:center; justify-content:space-between; padding:11px 4px;
+    border-bottom:1px solid var(--line); cursor:pointer;}
+  .room-row:last-child{border-bottom:none;}
+  .room-row .left{display:flex; align-items:center; gap:10px;}
+  .badge{width:11px; height:11px; border-radius:50%; flex:none;}
+  .badge.green{background:var(--green);} .badge.amber{background:var(--amber);} .badge.red{background:var(--red);}
+  .room-row .name{font-weight:700; font-size:14.5px;}
+  .room-row .stat{font-size:11.5px; color:var(--sub);}
+  .chev{color:var(--sub); font-size:14px;}
+
+  .searchbar{display:flex; gap:8px; margin-bottom:10px;}
+  .searchbar input{flex:1; border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:14px; background:#fff;}
+  .filter-row{display:flex; gap:6px; overflow-x:auto; margin-bottom:10px; padding-bottom:2px;}
+  .chip{white-space:nowrap; border:1px solid var(--line); background:#fff; color:var(--sub);
+    padding:6px 12px; border-radius:999px; font-size:12px; font-weight:600; cursor:pointer;}
+  .chip.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+
+  /* ---------- room detail ---------- */
+  .student-card{border:1.5px solid var(--line); border-radius:14px; padding:14px; margin-bottom:10px;
+    display:flex; align-items:center; justify-content:space-between; transition:.15s;}
+  .student-card.reached{border-color:var(--green); background:var(--green-bg);}
+  .student-card .label{font-weight:700; font-size:14.5px;}
+  .student-card .meta{font-size:11px; color:var(--sub); margin-top:2px;}
+  .toggle{width:50px; height:30px; border-radius:999px; background:var(--line); position:relative; flex:none; cursor:pointer; border:none;}
+  .toggle.on{background:var(--green);}
+  .toggle .knob{position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff;
+    box-shadow:0 1px 3px rgba(0,0,0,.25); transition:.15s;}
+  .toggle.on .knob{left:23px;}
+
+  .hist-item{padding:8px 0; border-bottom:1px dashed var(--line); font-size:12.5px;}
+  .hist-item:last-child{border-bottom:none;}
+  .hist-item b{color:var(--ink);}
+
+  .backbar{display:flex; align-items:center; gap:8px; margin-bottom:10px; font-weight:700; font-size:14px; cursor:pointer; color:var(--accent);}
+
+  .toast{position:fixed; bottom:88px; left:50%; transform:translateX(-50%); background:#1c1917; color:#fff;
+    padding:9px 16px; border-radius:999px; font-size:12.5px; z-index:50; opacity:0; transition:.25s; pointer-events:none;}
+  .toast.show{opacity:1;}
+
+  .modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:60; display:flex; align-items:flex-end; justify-content:center;}
+  .modal{background:#fff; width:100%; max-width:640px; border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom));}
+  .modal input{width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 12px; font-size:15px; margin-top:10px;}
+
+  .empty{text-align:center; padding:30px 10px; color:var(--sub); font-size:13px;}
+  table.exp{width:100%; border-collapse:collapse; font-size:11px;}
+  table.exp th,table.exp td{border:1px solid var(--line); padding:4px 6px; text-align:left;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="row">
+    <div>
+      <div class="title">🌾 Carte de la Moisson</div>
+      <div class="sub" id="userSub">INP-HB Centre</div>
+    </div>
+    <div class="sync-pill" id="syncPill">
+      <div class="dot green" id="syncDot"></div>
+      <span id="syncText">Synchronisé</span>
+    </div>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<div class="toast" id="toast"></div>
+
+<nav class="bottom">
+  <button class="tab active" data-tab="dashboard"><span class="ic">🏠</span>Accueil</button>
+  <button class="tab" data-tab="buildings"><span class="ic">🏢</span>Bâtiments</button>
+  <button class="tab" data-tab="remaining"><span class="ic">📋</span>Restantes</button>
+  <button class="tab" data-tab="stats"><span class="ic">📊</span>Stats</button>
+  <button class="tab" data-tab="admin"><span class="ic">⚙️</span>Admin</button>
+</nav>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= CONFIG ================= */
+var BUILDINGS = ["A","B","C","D","E","F","G","H","J","K","L","M","N","P","R","T"];
+var ROOM_COUNT = { B:64 };
+function roomCount(b){ return ROOM_COUNT[b] || 96; }
+
+/* ================= STATE (in-memory, session-only) ================= */
+var state = {
+  user: null,                 // {name}
+  cache: {},                  // buildingLetter -> {rooms:{...}}
+  loadedBuildings: {},        // letter -> true once fetched
+  pending: [],                // queued changes not yet confirmed synced
+  online: true,
+  syncing: false,
+  lastError: null,
+  tab: "dashboard",
+  route: null,                // e.g. {view:'building', b:'A'} or {view:'room', b:'A', n:12}
+  filter: "all",
+  search: ""
+};
+
+/* ================= STORAGE HELPERS ================= */
+function safeGet(key, shared){
+  return window.storage.get(key, shared).catch(function(){ return null; });
+}
+function safeSet(key, value, shared){
+  return window.storage.set(key, value, shared);
+}
+
+function defaultRoom(){
+  return { s1:{r:false,by:null,at:null}, s2:{r:false,by:null,at:null}, history:[] };
+}
+
+function roomStatus(room){
+  var c = (room.s1.r?1:0) + (room.s2.r?1:0);
+  if(c===2) return "green";
+  if(c===1) return "amber";
+  return "red";
+}
+
+/* fetch (and cache) a building's data fresh from shared storage */
+function loadBuilding(letter, forceFresh){
+  if(!forceFresh && state.cache[letter]) return Promise.resolve(state.cache[letter]);
+  return safeGet("building:"+letter, true).then(function(res){
+    var data;
+    try{ data = res && res.value ? JSON.parse(res.value) : {rooms:{}}; }
+    catch(e){ data = {rooms:{}}; }
+    if(!data.rooms) data.rooms = {};
+    state.cache[letter] = data;
+    state.loadedBuildings[letter] = true;
+    return data;
+  });
+}
+
+function saveBuilding(letter, data){
+  return safeSet("building:"+letter, JSON.stringify(data), true);
+}
+
+/* load every building (used by dashboard/stats/export) */
+function loadAllBuildings(){
+  return Promise.all(BUILDINGS.map(function(b){ return loadBuilding(b); }));
+}
+
+/* ================= USER PROFILE ================= */
+function loadUser(){
+  return safeGet("user:profile", false).then(function(res){
+    if(res && res.value){
+      try{ state.user = JSON.parse(res.value); }catch(e){ state.user = null; }
+    }
+  });
+}
+function saveUser(name){
+  state.user = { name: name };
+  return safeSet("user:profile", JSON.stringify(state.user), false);
+}
+
+/* ================= SYNC / OFFLINE QUEUE ================= */
+function setSyncUI(status, text){
+  var dot = document.getElementById("syncDot");
+  var txt = document.getElementById("syncText");
+  dot.className = "dot " + status;
+  txt.textContent = text;
+}
+
+function updateSyncPillFromState(){
+  if(!state.online){
+    setSyncUI("red", "Hors connexion");
+  } else if(state.pending.length>0){
+    setSyncUI("amber", "Sync… (" + state.pending.length + ")");
+  } else if(state.lastError){
+    setSyncUI("err", "Erreur sync");
+  } else {
+    setSyncUI("green", "Synchronisé");
+  }
+}
+
+/* core: apply a change to a room with read-merge-write to avoid clobbering
+   other users' concurrent edits to the same building blob */
+function applyRoomChange(building, num, studentKey, reached){
+  var change = {
+    id: Date.now()+"-"+Math.random().toString(36).slice(2,7),
+    building: building, num: num, studentKey: studentKey, reached: reached,
+    by: state.user ? state.user.name : "Inconnu",
+    at: new Date().toISOString()
+  };
+
+  // optimistic local update
+  var local = state.cache[building] || {rooms:{}};
+  var room = local.rooms[num] || defaultRoom();
+  room[studentKey] = { r: reached, by: change.by, at: change.at };
+  room.history = room.history || [];
+  room.history.unshift({ student: studentKey, action: reached ? "atteint" : "annulé", by: change.by, at: change.at });
+  if(room.history.length>50) room.history = room.history.slice(0,50);
+  local.rooms[num] = room;
+  state.cache[building] = local;
+
+  state.pending.push(change);
+  updateSyncPillFromState();
+  render();
+
+  return trySync();
+}
+
+function trySync(){
+  if(state.syncing || state.pending.length===0) return Promise.resolve();
+  state.syncing = true;
+  updateSyncPillFromState();
+
+  var change = state.pending[0];
+  return loadBuilding(change.building, true).then(function(fresh){
+    var room = fresh.rooms[change.num] || defaultRoom();
+    room[change.studentKey] = { r: change.reached, by: change.by, at: change.at };
+    room.history = room.history || [];
+    var already = room.history.some(function(h){ return h.by===change.by && h.at===change.at && h.student===change.studentKey; });
+    if(!already){
+      room.history.unshift({ student: change.studentKey, action: change.reached ? "atteint" : "annulé", by: change.by, at: change.at });
+      if(room.history.length>50) room.history = room.history.slice(0,50);
+    }
+    fresh.rooms[change.num] = room;
+    return saveBuilding(change.building, fresh).then(function(){
+      state.cache[change.building] = fresh;
+      state.pending.shift();
+      state.lastError = null;
+      state.online = true;
+      state.syncing = false;
+      updateSyncPillFromState();
+      render();
+      if(state.pending.length>0) return trySync();
+    });
+  }).catch(function(err){
+    state.syncing = false;
+    state.online = navigator.onLine;
+    state.lastError = err;
+    updateSyncPillFromState();
+  });
+}
+
+setInterval(function(){
+  state.online = navigator.onLine;
+  if(state.online) trySync();
+  updateSyncPillFromState();
+}, 8000);
+window.addEventListener("online", function(){ state.online = true; trySync(); updateSyncPillFromState(); });
+window.addEventListener("offline", function(){ state.online = false; updateSyncPillFromState(); });
+
+/* ================= TOAST ================= */
+var toastTimer;
+function toast(msg){
+  var el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove("show"); }, 1800);
+}
+
+/* ================= STATS ================= */
+function computeStats(){
+  var totalRooms=0, green=0, amber=0, red=0, studentsReached=0, studentsTotal=0;
+  var perBuilding = {};
+  BUILDINGS.forEach(function(b){
+    var rc = roomCount(b);
+    var data = state.cache[b] || {rooms:{}};
+    var bGreen=0;
+    for(var i=1;i<=rc;i++){
+      var room = data.rooms[i] || defaultRoom();
+      var st = roomStatus(room);
+      if(st==="green"){ green++; bGreen++; }
+      else if(st==="amber") amber++;
+      else red++;
+      studentsTotal += 2;
+      if(room.s1.r) studentsReached++;
+      if(room.s2.r) studentsReached++;
+    }
+    totalRooms += rc;
+    perBuilding[b] = { pct: rc? Math.round(bGreen/rc*100):0, rc: rc };
+  });
+  return { totalRooms:totalRooms, green:green, amber:amber, red:red,
+    studentsReached:studentsReached, studentsTotal:studentsTotal, perBuilding:perBuilding };
+}
+
+/* ================= RENDER ================= */
+var app = document.getElementById("app");
+
+function render(){
+  document.getElementById("userSub").textContent = state.user ? ("Frère " + state.user.name) : "INP-HB Centre";
+  document.querySelectorAll("nav.bottom .tab").forEach(function(t){
+    t.classList.toggle("active", t.dataset.tab===state.tab);
+  });
+
+  if(!state.user){ renderNameModal(); }
+
+  var needAll = (state.tab==="dashboard" || state.tab==="stats" || state.tab==="remaining" || state.tab==="admin");
+  var needsLoad = needAll && BUILDINGS.some(function(b){ return !state.loadedBuildings[b]; });
+  var needsRoute = state.route && !state.loadedBuildings[state.route.b];
+
+  if(needsLoad || needsRoute){
+    app.innerHTML = '<div class="empty">Chargement des données…</div>';
+    var p = needsLoad ? loadAllBuildings() : loadBuilding(state.route.b);
+    p.then(render);
+    return;
+  }
+
+  if(state.route && state.route.view==="building") return renderBuildingView(state.route.b);
+  if(state.route && state.route.view==="room") return renderRoomView(state.route.b, state.route.n);
+
+  if(state.tab==="dashboard") return renderDashboard();
+  if(state.tab==="buildings") return renderBuildings();
+  if(state.tab==="remaining") return renderRemaining();
+  if(state.tab==="stats") return renderStats();
+  if(state.tab==="admin") return renderAdmin();
+}
+
+function renderNameModal(){
+  var wrap = document.createElement("div");
+  wrap.className = "modal-bg";
+  wrap.innerHTML =
+    '<div class="modal">' +
+      '<h3>Bienvenue 🙏</h3>' +
+      '<p class="muted">Indique ton prénom et nom pour associer tes visites.</p>' +
+      '<input id="nameInput" placeholder="Ex. Yao Bosco KOUAKOU" />' +
+      '<button class="btn block" style="margin-top:12px" id="nameBtn">Commencer</button>' +
+    '</div>';
+  document.body.appendChild(wrap);
+  var input = wrap.querySelector("#nameInput");
+  wrap.querySelector("#nameBtn").onclick = function(){
+    var v = input.value.trim();
+    if(!v) { input.focus(); return; }
+    saveUser(v).then(function(){
+      document.body.removeChild(wrap);
+      render();
+    });
+  };
+}
+
+function pct(n,d){ return d? Math.round(n/d*100) : 0; }
+
+function renderDashboard(){
+  var s = computeStats();
+  var p = pct(s.green, s.totalRooms);
+  app.innerHTML =
+  '<div class="card">' +
+    '<div class="big-progress">' +
+      '<div class="ring" style="--pct:'+p+'"><span>'+p+'%</span></div>' +
+      '<div><h2 style="font-size:16px">Couverture globale</h2>' +
+      '<div class="muted">'+s.green+' / '+s.totalRooms+' chambres complètement visitées</div></div>' +
+    '</div>' +
+    '<div class="stat-grid">' +
+      statBox(s.totalRooms,"Chambres totales") +
+      statBox(s.green,"Complètes 🟢") +
+      statBox(s.amber,"Partielles 🟡") +
+      statBox(s.red,"Non visitées 🔴") +
+    '</div>' +
+    '<div style="margin-top:10px" class="muted">Étudiants atteints</div>' +
+    '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct(s.studentsReached,s.studentsTotal)+'%"></div></div>' +
+    '<div class="muted">'+s.studentsReached+' / '+s.studentsTotal+'</div>' +
+  '</div>' +
+  '<button class="btn block" id="nextRoomBtn">➡️ Chambre suivante à évangéliser</button>' +
+  '<div style="height:10px"></div>' +
+  '<div class="card">' +
+    '<h3 style="font-size:14px">Actions rapides</h3>' +
+    '<div style="display:flex; gap:8px; margin-top:8px">' +
+      '<button class="btn secondary sm" data-tab="buildings">Voir bâtiments</button>' +
+      '<button class="btn secondary sm" data-tab="remaining">Chambres restantes</button>' +
+    '</div>' +
+  '</div>';
+  app.querySelector("#nextRoomBtn").onclick = goNextRoom;
+  app.querySelectorAll("[data-tab]").forEach(function(b){
+    b.onclick = function(){ state.tab=b.dataset.tab; state.route=null; render(); };
+  });
+}
+function statBox(n,l){ return '<div class="stat-box"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+
+function goNextRoom(){
+  // priority: never-visited rooms first, then partial
+  for(var pass=0; pass<2; pass++){
+    for(var bi=0; bi<BUILDINGS.length; bi++){
+      var b = BUILDINGS[bi], rc = roomCount(b);
+      var data = state.cache[b] || {rooms:{}};
+      for(var i=1;i<=rc;i++){
+        var room = data.rooms[i] || defaultRoom();
+        var st = roomStatus(room);
+        if(pass===0 && st==="red"){ openRoom(b,i); return; }
+        if(pass===1 && st==="amber"){ openRoom(b,i); return; }
+      }
+    }
+  }
+  toast("Toutes les chambres sont complètement visitées 🎉");
+}
+
+function renderBuildings(){
+  var s = computeStats();
+  var html = '<div class="card"><h3 style="font-size:14px">Bâtiments</h3><div class="bld-grid" style="margin-top:8px">';
+  BUILDINGS.forEach(function(b){
+    var p = s.perBuilding[b].pct;
+    var dotColor = p===100 ? "var(--green)" : (p===0 ? "var(--red)" : "var(--amber)");
+    html += '<div class="bld-cell" data-b="'+b+'"><div class="ring-mini" style="background:'+dotColor+'"></div>'+b+'<small>'+p+'%</small></div>';
+  });
+  html += '</div></div>';
+  app.innerHTML = html;
+  app.querySelectorAll(".bld-cell").forEach(function(c){
+    c.onclick = function(){ openBuilding(c.dataset.b); };
+  });
+}
+
+function openBuilding(b){
+  state.route = { view:"building", b:b };
+  render();
+}
+function openRoom(b,n){
+  state.route = { view:"room", b:b, n:n };
+  render();
+}
+function closeRoute(){
+  state.route = null;
+  render();
+}
+
+function renderBuildingView(b){
+  var rc = roomCount(b);
+  var data = state.cache[b] || {rooms:{}};
+  var rows = [];
+  for(var i=1;i<=rc;i++){
+    var room = data.rooms[i] || defaultRoom();
+    rows.push({n:i, room:room, st:roomStatus(room)});
+  }
+  if(state.filter!=="all"){
+    rows = rows.filter(function(r){ return r.st===state.filter; });
+  }
+  if(state.search){
+    var q = state.search.toLowerCase();
+    rows = rows.filter(function(r){ return (b+"-"+r.n).toLowerCase().indexOf(q)>=0 || (""+r.n).indexOf(q)>=0; });
+  }
+
+  var html = '<div class="backbar" id="backBtn">← Bâtiment '+b+'</div>';
+  html += '<div class="card">';
+  html += '<div class="searchbar"><input id="searchIn" placeholder="Rechercher une chambre…" value="'+escapeHtml(state.search)+'"></div>';
+  html += '<div class="filter-row">' +
+    chip("all","Toutes") + chip("red","Non visitées") + chip("amber","Partielles") + chip("green","Complètes") +
+  '</div>';
+  if(rows.length===0){
+    html += '<div class="empty">Aucune chambre trouvée.</div>';
+  } else {
+    rows.forEach(function(r){
+      var statLabel = r.st==="green" ? "2/2 atteints" : (r.st==="amber" ? "1/2 atteint" : "Non visitée");
+      html += '<div class="room-row" data-n="'+r.n+'">' +
+        '<div class="left"><div class="badge '+r.st+'"></div>' +
+        '<div><div class="name">'+b+'-'+r.n+'</div><div class="stat">'+statLabel+'</div></div></div>' +
+        '<div class="chev">›</div></div>';
+    });
+  }
+  html += '</div>';
+  app.innerHTML = html;
+
+  document.getElementById("backBtn").onclick = closeRoute;
+  app.querySelector("#searchIn").oninput = function(e){ state.search = e.target.value; renderBuildingView(b); };
+  app.querySelectorAll(".chip").forEach(function(c){
+    c.onclick = function(){ state.filter = c.dataset.f; renderBuildingView(b); };
+  });
+  app.querySelectorAll(".room-row").forEach(function(r){
+    r.onclick = function(){ openRoom(b, parseInt(r.dataset.n,10)); };
+  });
+}
+function chip(f,label){
+  return '<div class="chip '+(state.filter===f?"active":"")+'" data-f="'+f+'">'+label+'</div>';
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+function renderRoomView(b,n){
+  var data = state.cache[b] || {rooms:{}};
+  var room = data.rooms[n] || defaultRoom();
+  var html = '<div class="backbar" id="backBtn">← '+b+'-'+n+'</div>';
+  html += '<div class="card">';
+  html += studentCard(1, room.s1);
+  html += studentCard(2, room.s2);
+  html += '</div>';
+  html += '<div class="card"><h3 style="font-size:14px">Historique</h3><div id="histWrap">';
+  if(!room.history || room.history.length===0){
+    html += '<div class="empty">Aucune visite enregistrée.</div>';
+  } else {
+    room.history.forEach(function(h){
+      var d = new Date(h.at);
+      html += '<div class="hist-item">Étudiant '+h.student.replace("s","")+' — <b>'+h.action+'</b> par '+escapeHtml(h.by)+' · '+d.toLocaleString("fr-FR")+'</div>';
+    });
+  }
+  html += '</div></div>';
+  app.innerHTML = html;
+  document.getElementById("backBtn").onclick = closeRoute;
+
+  app.querySelectorAll(".toggle").forEach(function(t){
+    t.onclick = function(){
+      var sk = t.dataset.s;
+      var newVal = !(room[sk].r);
+      applyRoomChange(b, n, sk, newVal);
+      toast("Étudiant "+sk.replace("s","")+" marqué comme "+(newVal?"atteint":"non atteint"));
+    };
+  });
+}
+function studentCard(num, s){
+  var key = "s"+num;
+  return '<div class="student-card '+(s.r?"reached":"")+'">' +
+    '<div><div class="label">Étudiant '+num+'</div>' +
+    '<div class="meta">'+(s.r ? ("Atteint par "+escapeHtml(s.by||"")+(s.at? (" · "+new Date(s.at).toLocaleDateString("fr-FR")):"")) : "Pas encore rencontré")+'</div></div>' +
+    '<button class="toggle '+(s.r?"on":"")+'" data-s="'+key+'"><span class="knob"></span></button></div>';
+}
+
+function renderRemaining(){
+  var list = [];
+  BUILDINGS.forEach(function(b){
+    var rc = roomCount(b);
+    var data = state.cache[b] || {rooms:{}};
+    for(var i=1;i<=rc;i++){
+      var room = data.rooms[i] || defaultRoom();
+      var st = roomStatus(room);
+      if(st!=="green") list.push({b:b,n:i,st:st});
+    }
+  });
+  if(state.search){
+    var q = state.search.toLowerCase();
+    list = list.filter(function(r){ return (r.b+"-"+r.n).toLowerCase().indexOf(q)>=0; });
+  }
+  var html = '<div class="card"><h3 style="font-size:14px">Chambres restantes ('+list.length+')</h3>';
+  html += '<div class="searchbar" style="margin-top:8px"><input id="searchIn" placeholder="Ex. B-27" value="'+escapeHtml(state.search)+'"></div>';
+  if(list.length===0){
+    html += '<div class="empty">🎉 Toutes les chambres ont été complètement visitées !</div>';
+  } else {
+    list.slice(0,300).forEach(function(r){
+      var label = r.st==="amber" ? "1/2" : "0/2";
+      html += '<div class="room-row" data-b="'+r.b+'" data-n="'+r.n+'">' +
+        '<div class="left"><div class="badge '+r.st+'"></div><div class="name">'+r.b+'-'+r.n+'</div></div>' +
+        '<div class="stat">'+label+'</div></div>';
+    });
+    if(list.length>300) html += '<div class="muted" style="padding:8px 0">… et '+(list.length-300)+' autres. Affine ta recherche.</div>';
+  }
+  html += '</div>';
+  app.innerHTML = html;
+  app.querySelector("#searchIn").oninput = function(e){ state.search = e.target.value; renderRemaining(); };
+  app.querySelectorAll(".room-row").forEach(function(r){
+    r.onclick = function(){ openRoom(r.dataset.b, parseInt(r.dataset.n,10)); };
+  });
+}
+
+function renderStats(){
+  var s = computeStats();
+  var html = '<div class="card"><h3 style="font-size:14px">Couverture des chambres</h3>' +
+    '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct(s.green,s.totalRooms)+'%"></div></div>' +
+    '<div class="muted">'+pct(s.green,s.totalRooms)+'% ('+s.green+'/'+s.totalRooms+')</div>' +
+    '<h3 style="font-size:14px; margin-top:14px">Couverture des étudiants</h3>' +
+    '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct(s.studentsReached,s.studentsTotal)+'%; background:var(--accent2)"></div></div>' +
+    '<div class="muted">'+pct(s.studentsReached,s.studentsTotal)+'% ('+s.studentsReached+'/'+s.studentsTotal+')</div>' +
+  '</div>';
+  html += '<div class="card"><h3 style="font-size:14px">Progression par bâtiment</h3>';
+  BUILDINGS.forEach(function(b){
+    var p = s.perBuilding[b].pct;
+    html += '<div style="margin:8px 0">' +
+      '<div style="display:flex; justify-content:space-between; font-size:12.5px"><span><b>'+b+'</b></span><span>'+p+'%</span></div>' +
+      '<div class="bar-wrap"><div class="bar-fill" style="width:'+p+'%"></div></div></div>';
+  });
+  html += '</div>';
+  app.innerHTML = html;
+}
+
+function renderAdmin(){
+  var s = computeStats();
+  var html = '<div class="card"><h3 style="font-size:14px">Profil</h3>' +
+    '<div class="muted">Connecté en tant que <b>'+escapeHtml(state.user?state.user.name:"—")+'</b></div>' +
+    '<button class="btn secondary sm" id="changeNameBtn" style="margin-top:10px">Changer de nom</button>' +
+  '</div>';
+  html += '<div class="card"><h3 style="font-size:14px">Export des données</h3>' +
+    '<div class="muted">Exporte l\'état actuel de toutes les chambres au format CSV.</div>' +
+    '<button class="btn block" id="exportBtn" style="margin-top:10px">⬇️ Exporter en CSV</button>' +
+  '</div>';
+  html += '<div class="card"><h3 style="font-size:14px">À propos de la synchronisation</h3>' +
+    '<div class="muted">Les données des chambres sont partagées entre tous les frères qui utilisent cette application '+
+    '(stockage partagé). Les modifications sont fusionnées chambre par chambre pour éviter qu\'une visite écrase une autre. '+
+    'Si le réseau est coupé, tes actions restent en attente ('+state.pending.length+' en attente) et se synchronisent dès que la connexion revient.</div>' +
+  '</div>';
+  app.innerHTML = html;
+  app.querySelector("#exportBtn").onclick = exportCsv;
+  app.querySelector("#changeNameBtn").onclick = function(){
+    state.user = null; render();
+  };
+}
+
+function exportCsv(){
+  var rows = [["Bâtiment","Chambre","Étudiant 1","Étudiant 2","Statut","Dernière mise à jour"]];
+  BUILDINGS.forEach(function(b){
+    var rc = roomCount(b);
+    var data = state.cache[b] || {rooms:{}};
+    for(var i=1;i<=rc;i++){
+      var room = data.rooms[i] || defaultRoom();
+      var c = (room.s1.r?1:0)+(room.s2.r?1:0);
+      var lastAt = [room.s1.at, room.s2.at].filter(Boolean).sort().pop();
+      rows.push([b, b+"-"+i, room.s1.r?"Oui":"Non", room.s2.r?"Oui":"Non", c+"/2", lastAt?new Date(lastAt).toLocaleString("fr-FR"):"-"]);
+    }
+  });
+  var csv = rows.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(","); }).join("\n");
+  var blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = "carte-moisson-export.csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast("Export CSV généré");
+}
+
+/* ================= NAV WIRING ================= */
+document.querySelectorAll("nav.bottom .tab").forEach(function(t){
+  t.onclick = function(){
+    state.tab = t.dataset.tab;
+    state.route = null;
+    state.filter = "all";
+    state.search = "";
+    render();
+  };
+});
+
+/* ================= INIT ================= */
+state.online = navigator.onLine;
+loadUser().then(function(){
+  return loadAllBuildings();
+}).then(function(){
+  updateSyncPillFromState();
+  render();
+}).catch(function(){
+  render();
+});
+
+})();
+</script>
+</body>
+</html>
